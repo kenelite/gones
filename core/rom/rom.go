@@ -64,12 +64,16 @@ func (c *Cartridge) Write(addr uint16, val byte) {
 
 // 直接从数据加载 ROM
 func LoadCartridgeFromData(data []byte) (*Cartridge, error) {
+	fmt.Println("[gones] LoadCartridgeFromData: 开始解析...")
 	if len(data) < 16 {
+		fmt.Println("[gones] LoadCartridgeFromData: 数据过短")
 		return nil, fmt.Errorf("invalid rom: too short")
 	}
 
 	header := ParseINESHeader(data[:16])
+	fmt.Println("[gones] LoadCartridgeFromData: header 解析完成")
 	if string(header.Magic[:]) != "NES\x1A" {
+		fmt.Println("[gones] LoadCartridgeFromData: 非法 iNES header")
 		return nil, fmt.Errorf("invalid iNES header")
 	}
 
@@ -80,13 +84,17 @@ func LoadCartridgeFromData(data []byte) (*Cartridge, error) {
 	chrStart := prgStart + prgSize
 
 	if len(data) < chrStart+chrSize {
+		fmt.Println("[gones] LoadCartridgeFromData: 文件过小")
 		return nil, fmt.Errorf("invalid rom: file too small")
 	}
 
-	return &Cartridge{
+	fmt.Println("[gones] LoadCartridgeFromData: 解析 Cartridge 结构体 ...")
+	cart := &Cartridge{
 		PRG:       data[prgStart:chrStart],
 		CHR:       data[chrStart : chrStart+chrSize],
 		MapperID:  (header.Flags6 >> 4) | (header.Flags7 & 0xF0),
 		Mirroring: header.Flags6 & 0x01,
-	}, nil
+	}
+	fmt.Println("[gones] LoadCartridgeFromData: 完成")
+	return cart, nil
 }

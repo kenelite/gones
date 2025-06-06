@@ -72,15 +72,22 @@ func (b *Bus) RunFrame() error {
 
 // 加载 ROM 数据
 func (b *Bus) LoadROM(data []byte) error {
+	fmt.Println("[gones] LoadROM: 开始")
+	fmt.Printf("[gones] LoadROM: data 长度 = %d\n", len(data))
+	fmt.Println("[gones] LoadROM: 解析 ROM 数据...")
 	cartridge, err := rom.LoadCartridgeFromData(data)
 	if err != nil {
+		fmt.Println("[gones] LoadROM: 解析 ROM 失败")
 		return fmt.Errorf("LoadROM: %w", err)
 	}
+	fmt.Println("[gones] LoadROM: 替换 Cartridge ...")
 	b.Cartridge = cartridge
 	// 可选：重建 APU
 	if b.APU != nil {
+		fmt.Println("[gones] LoadROM: 重建 APU ...")
 		b.APU = apu.NewAPU()
 	}
+	fmt.Println("[gones] LoadROM: 完成")
 	return nil
 }
 
