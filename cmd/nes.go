@@ -13,39 +13,46 @@ import (
 )
 
 func main() {
-	// 命令行参数支持
+	fmt.Println("[gones] 启动参数解析...")
 	romPath := flag.String("rom", "", "Path to NES ROM file (.nes)")
 	windowScale := flag.Int("scale", 2, "Window scale factor (default 2)")
 	flag.Parse()
 
+	var romData []byte
+	var err error
+
 	if *romPath == "" {
-		fmt.Println("Usage: nes -rom <path_to_rom_file.nes> [-scale 2]")
-		os.Exit(1)
+		fmt.Println("[gones] 未指定 -rom 参数，弹窗选择 ROM 文件...")
+		romData, _, err = ui.OpenROM()
+		if err != nil {
+			log.Fatalf("No ROM loaded: %v", err)
+		}
+	} else {
+		fmt.Printf("[gones] 通过命令行参数加载 ROM: %s\n", *romPath)
+		romData, err = os.ReadFile(*romPath)
+		if err != nil {
+			log.Fatalf("Failed to read ROM file: %v", err)
+		}
 	}
 
-	// 读取 ROM 文件
-	romData, err := os.ReadFile(*romPath)
-	if err != nil {
-		log.Fatalf("Failed to read ROM file: %v", err)
-	}
-
-	// 初始化控制器输入
+	fmt.Println("[gones] 初始化控制器...")
 	controller := input.NewController()
 
-	// 初始化总线，载入 ROM
+	fmt.Println("[gones] 初始化总线...")
 	bus := bus.NewBus(controller)
+	fmt.Println("[gones] 加载 ROM 到总线...")
 	if err := bus.LoadROM(romData); err != nil {
 		log.Fatalf("Failed to load ROM into bus: %v", err)
 	}
 
-	// 初始化 UI Game 对象
+	fmt.Println("[gones] 初始化 UI Game...")
 	game := ui.NewGame(bus)
 
-	// 设置窗口标题和尺寸
+	fmt.Println("[gones] 设置窗口参数...")
 	ebiten.SetWindowTitle("Gones - NES Emulator")
 	ebiten.SetWindowSize(256**windowScale, 240**windowScale)
 
-	// 运行游戏主循环
+	fmt.Println("[gones] 启动主循环...")
 	if err := ebiten.RunGame(game); err != nil {
 		log.Fatalf("Game loop exited with error: %v", err)
 	}

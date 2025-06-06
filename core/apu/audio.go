@@ -5,7 +5,7 @@ import (
 	"math"
 	"sync"
 
-	"github.com/hajimehoshi/oto/v2"
+	oto "github.com/ebitengine/oto/v3"
 )
 
 const (
@@ -13,9 +13,8 @@ const (
 )
 
 type AudioOutput struct {
-	player oto.Player
-	buf    []byte
-	idx    int
+	player *oto.Player
+	buf    *audioBuffer
 }
 
 // 实现一个 io.Reader 用于 PCM 数据流
@@ -39,31 +38,21 @@ func (b *audioBuffer) Read(p []byte) (int, error) {
 }
 
 func NewAudioOutput() *AudioOutput {
-	ctx, ready, _ := oto.NewContext(sampleRate, 1, 2)
+	ctx, ready, _ := oto.NewContext(&oto.NewContextOptions{
+		SampleRate:   sampleRate,
+		ChannelCount: 1,
+		Format:       oto.FormatSignedInt16LE,
+	})
 	<-ready
 	buf := &audioBuffer{}
 	player := ctx.NewPlayer(buf)
 	player.Play()
-	return &AudioOutput{
-		player: player,
-		buf:    make([]byte, 2048),
-	}
+	return &AudioOutput{player: player, buf: buf}
 }
 
 func (a *AudioOutput) EnqueueSample(sample float64) {
-	// 将 float64 转为 16-bit PCM
 	s := int16(math.MaxInt16 * sample)
-	a.buf[a.idx] = byte(s)
-	a.buf[a.idx+1] = byte(s >> 8)
-	a.idx += 2
-	if a.idx >= len(a.buf) {
-		// 写入 audioBuffer
-		ab := a.player.(interface{ Reader() io.Reader })
-		if buf, ok := ab.Reader().(*audioBuffer); ok {
-			buf.mu.Lock()
-			buf.data = append(buf.data, a.buf...)
-			buf.mu.Unlock()
-		}
-		a.idx = 0
-	}
+	a.buf.mu.Lock()
+	a.buf.data = append(a.buf.data, byte(s), byte(s>>8))
+	a.buf.mu.Unlock()
 }

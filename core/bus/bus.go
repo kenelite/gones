@@ -85,11 +85,18 @@ func (b *Bus) LoadROM(data []byte) error {
 }
 
 func NewBus(controller *input.Controller) *Bus {
+	fmt.Println("[gones] Bus: 初始化 PPU...")
+	ppuObj := ppu.NewPPU()
+	fmt.Println("[gones] Bus: 初始化 APU...")
+	apuObj := apu.NewAPU()
+	fmt.Println("[gones] Bus: 构造 Bus 实例...")
 	b := &Bus{
-		PPU:         ppu.NewPPU(),
-		APU:         apu.NewAPU(),
+		PPU:         ppuObj,
+		APU:         apuObj,
 		Controller1: controller,
 	}
+	fmt.Println("[gones] Bus: 初始化 CPU...")
 	b.CPU = cpu.New(b)
+	fmt.Println("[gones] Bus: 完成")
 	return b
 }
