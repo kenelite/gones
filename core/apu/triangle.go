@@ -1,5 +1,7 @@
 package apu
 
+import "log"
+
 type TriangleChannel struct {
 	phase   float64
 	freq    float64
@@ -7,7 +9,10 @@ type TriangleChannel struct {
 }
 
 func NewTriangleChannel() *TriangleChannel {
-	return &TriangleChannel{}
+	log.Println("[APU] Enter NewTriangleChannel")
+	ch := &TriangleChannel{}
+	log.Println("[APU] Exit NewTriangleChannel")
+	return ch
 }
 
 func (t *TriangleChannel) Step() {

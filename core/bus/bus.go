@@ -21,20 +21,27 @@ type Bus struct {
 
 // 实现 CPU.Bus 接口
 func (b *Bus) Read(addr uint16) byte {
+	// 自动加日志，排查 nil 指针
 	switch {
 	case addr < 0x2000:
 		return b.RAM[addr%0x0800] // 内存镜像
 	case addr < 0x4000:
+		if b.PPU == nil {
+			panic("Bus.PPU is nil in Read")
+		}
 		return b.PPU.ReadRegister(0x2000 + addr%8)
 	case addr == 0x4015:
 		// APU 状态寄存器
 		return 0 // 可扩展
 	case addr == 0x4016:
-		if b.Controller1 != nil {
-			return b.Controller1.Read()
+		if b.Controller1 == nil {
+			panic("Bus.Controller1 is nil in Read")
 		}
-		return 0
+		return b.Controller1.Read()
 	case addr >= 0x8000:
+		if b.Cartridge == nil {
+			panic("Bus.Cartridge is nil in Read")
+		}
 		return b.Cartridge.Read(addr)
 	default:
 		// 未实现的地址
@@ -43,18 +50,26 @@ func (b *Bus) Read(addr uint16) byte {
 }
 
 func (b *Bus) Write(addr uint16, val byte) {
+	// 自动加日志，排查 nil 指针
 	switch {
 	case addr < 0x2000:
 		b.RAM[addr%0x0800] = val
 	case addr < 0x4000:
+		if b.PPU == nil {
+			panic("Bus.PPU is nil in Write")
+		}
 		b.PPU.WriteRegister(0x2000+addr%8, val)
 	case addr == 0x4015:
 		// APU 控制寄存器
 	case addr == 0x4016:
-		if b.Controller1 != nil {
-			b.Controller1.Write(val)
+		if b.Controller1 == nil {
+			panic("Bus.Controller1 is nil in Write")
 		}
+		b.Controller1.Write(val)
 	case addr >= 0x8000:
+		if b.Cartridge == nil {
+			panic("Bus.Cartridge is nil in Write")
+		}
 		b.Cartridge.Write(addr, val)
 	}
 }

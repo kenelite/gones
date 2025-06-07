@@ -1,5 +1,7 @@
 package apu
 
+import "log"
+
 type PulseChannel struct {
 	frequency float64
 	volume    float64
@@ -9,9 +11,12 @@ type PulseChannel struct {
 }
 
 func NewPulseChannel() *PulseChannel {
-	return &PulseChannel{
+	log.Println("[APU] Enter NewPulseChannel")
+	ch := &PulseChannel{
 		duty: 0.5,
 	}
+	log.Println("[APU] Exit NewPulseChannel")
+	return ch
 }
 
 func (p *PulseChannel) Step() {

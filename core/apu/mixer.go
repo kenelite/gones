@@ -1,9 +1,14 @@
 package apu
 
+import "log"
+
 type Mixer struct{}
 
 func NewMixer() *Mixer {
-	return &Mixer{}
+	log.Println("[APU] Enter NewMixer")
+	m := &Mixer{}
+	log.Println("[APU] Exit NewMixer")
+	return m
 }
 
 func (m *Mixer) Mix(p1, p2 *PulseChannel, t *TriangleChannel, n *NoiseChannel) float64 {

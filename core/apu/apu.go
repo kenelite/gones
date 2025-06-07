@@ -1,5 +1,7 @@
 package apu
 
+import "log"
+
 type APU struct {
 	Pulse1   *PulseChannel
 	Pulse2   *PulseChannel
@@ -10,13 +12,39 @@ type APU struct {
 }
 
 func NewAPU() *APU {
+	log.Println("[APU] Initializing...")
+	pulse1 := NewPulseChannel()
+	if pulse1 == nil {
+		log.Println("[APU] NewPulseChannel failed!")
+	}
+	pulse2 := NewPulseChannel()
+	if pulse2 == nil {
+		log.Println("[APU] NewPulseChannel (2) failed!")
+	}
+	triangle := NewTriangleChannel()
+	if triangle == nil {
+		log.Println("[APU] NewTriangleChannel failed!")
+	}
+	noise := NewNoiseChannel()
+	if noise == nil {
+		log.Println("[APU] NewNoiseChannel failed!")
+	}
+	mixer := NewMixer()
+	if mixer == nil {
+		log.Println("[APU] NewMixer failed!")
+	}
+	output := NewAudioOutput()
+	if output == nil {
+		log.Println("[APU] NewAudioOutput failed!")
+	}
+	log.Println("[APU] All submodules initialized.")
 	return &APU{
-		Pulse1:   NewPulseChannel(),
-		Pulse2:   NewPulseChannel(),
-		Triangle: NewTriangleChannel(),
-		Noise:    NewNoiseChannel(),
-		Mixer:    NewMixer(),
-		Output:   NewAudioOutput(),
+		Pulse1:   pulse1,
+		Pulse2:   pulse2,
+		Triangle: triangle,
+		Noise:    noise,
+		Mixer:    mixer,
+		Output:   output,
 	}
 }
 
