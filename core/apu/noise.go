@@ -1,6 +1,9 @@
 package apu
 
-import "math/rand"
+import (
+	"log"
+	"math/rand"
+)
 
 type NoiseChannel struct {
 	enabled bool
@@ -8,7 +11,10 @@ type NoiseChannel struct {
 }
 
 func NewNoiseChannel() *NoiseChannel {
-	return &NoiseChannel{}
+	log.Println("[APU] Enter NewNoiseChannel")
+	ch := &NoiseChannel{}
+	log.Println("[APU] Exit NewNoiseChannel")
+	return ch
 }
 
 func (n *NoiseChannel) Step() {

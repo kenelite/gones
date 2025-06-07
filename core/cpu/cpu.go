@@ -1,5 +1,7 @@
 package cpu
 
+import "fmt"
+
 type CPU struct {
 	A, X, Y byte   // 累加器、X寄存器、Y寄存器
 	PC      uint16 // 程序计数器
@@ -32,7 +34,9 @@ func (c *CPU) Step() {
 		instruction := instructionTable[opcode]
 		c.cycles = instruction.cycles
 
-		// 调用处理函数
+		if instruction.handler == nil {
+			panic(fmt.Sprintf("instructionTable[%02X].handler is nil", opcode))
+		}
 		instruction.handler(c)
 	}
 
@@ -58,4 +62,38 @@ func (c *CPU) pushWord(val uint16) {
 	low := byte(val & 0xff)
 	c.pushByte(high)
 	c.pushByte(low)
+}
+
+// popByte 从栈顶弹出一个字节
+func (c *CPU) popByte() byte {
+	c.SP++
+	return c.Bus.Read(0x0100 + uint16(c.SP))
+}
+
+// adc 实现加法并设置标志位（简化版，建议后续完善）
+func (c *CPU) adc(value byte) {
+	carry := byte(0)
+	if c.getFlag(FlagCarry) {
+		carry = 1
+	}
+	sum := uint16(c.A) + uint16(value) + uint16(carry)
+	c.setFlag(FlagCarry, sum > 0xFF)
+	c.setFlag(FlagZero, byte(sum) == 0)
+	c.setFlag(FlagOverflow, (^uint16(c.A^value)&(uint16(c.A)^sum)&0x80) != 0)
+	c.setFlag(FlagNegative, (sum&0x80) != 0)
+	c.A = byte(sum)
+}
+
+// sbc 实现减法并设置标志位（简化版，建议后续完善）
+func (c *CPU) sbc(value byte) {
+	carry := byte(0)
+	if c.getFlag(FlagCarry) {
+		carry = 1
+	}
+	diff := int16(c.A) - int16(value) - int16(1-carry)
+	c.setFlag(FlagCarry, diff >= 0)
+	c.setFlag(FlagZero, byte(diff) == 0)
+	c.setFlag(FlagOverflow, ((int16(c.A)^diff)&(^int16(value)^diff)&0x80) != 0)
+	c.setFlag(FlagNegative, (diff&0x80) != 0)
+	c.A = byte(diff)
 }

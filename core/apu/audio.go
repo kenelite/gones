@@ -2,8 +2,10 @@ package apu
 
 import (
 	"io"
+	"log"
 	"math"
 	"sync"
+	"time"
 
 	oto "github.com/ebitengine/oto/v3"
 )
@@ -37,16 +39,40 @@ func (b *audioBuffer) Read(p []byte) (int, error) {
 	return n, nil
 }
 
-func NewAudioOutput() *AudioOutput {
-	ctx, ready, _ := oto.NewContext(&oto.NewContextOptions{
-		SampleRate:   sampleRate,
-		ChannelCount: 1,
-		Format:       oto.FormatSignedInt16LE,
+var (
+	globalOtoCtx   *oto.Context
+	globalOtoReady <-chan struct{}
+	globalOtoErr   error
+	otoOnce        sync.Once
+)
+
+func getGlobalOtoContext() (*oto.Context, <-chan struct{}, error) {
+	otoOnce.Do(func() {
+		globalOtoCtx, globalOtoReady, globalOtoErr = oto.NewContext(&oto.NewContextOptions{
+			SampleRate:   sampleRate,
+			ChannelCount: 1,
+			Format:       oto.FormatSignedInt16LE,
+		})
 	})
-	<-ready
+	return globalOtoCtx, globalOtoReady, globalOtoErr
+}
+
+func NewAudioOutput() *AudioOutput {
+	log.Println("[APU] Enter NewAudioOutput")
+	ctx, ready, err := getGlobalOtoContext()
+	if err != nil {
+		log.Fatalf("[APU] oto.NewContext error: %v", err)
+	}
+	select {
+	case <-ready:
+		// 正常
+	case <-time.After(3 * time.Second):
+		log.Fatalf("[APU] oto.NewContext ready timeout")
+	}
 	buf := &audioBuffer{}
 	player := ctx.NewPlayer(buf)
 	player.Play()
+	log.Println("[APU] Exit NewAudioOutput")
 	return &AudioOutput{player: player, buf: buf}
 }
 
