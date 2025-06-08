@@ -6,7 +6,7 @@ require (
 	github.com/ebitengine/oto/v3 v3.3.3
 	github.com/hajimehoshi/ebiten/v2 v2.8.8
 	github.com/sqweek/dialog v0.0.0-20240226140203-065105509627
-	golang.org/x/image v0.20.0
+	golang.org/x/image v0.28.0
 )
 
 require (

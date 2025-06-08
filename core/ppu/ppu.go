@@ -20,6 +20,11 @@ type PPU struct {
 	framebuffer [256 * 240]uint8
 
 	NMIOutput bool
+
+	// 新增: PPUADDR/PPUDATA 寄存器相关
+	vramAddr  uint16 // 当前 VRAM 地址
+	addrLatch bool   // PPUADDR 写入高低字节切换
+	oamAddr   byte   // OAMADDR
 }
 
 const (
@@ -47,7 +52,7 @@ var paletteRGB = [64][3]uint8{
 }
 
 func NewPPU() *PPU {
-	return &PPU{
+	ppu := &PPU{
 		VRAM:     NewVRAM(),
 		OAM:      NewOAM(),
 		Renderer: NewRenderer(),
@@ -55,6 +60,20 @@ func NewPPU() *PPU {
 		Ctrl:     &ControlRegister{},
 		Mask:     &MaskRegister{},
 	}
+	// 初始化默认调色板（调试用）
+	defaultPalette := [8]byte{0x0F, 0x01, 0x21, 0x31, 0x0F, 0x06, 0x16, 0x26}
+	for i, v := range defaultPalette {
+		ppu.VRAM.Palette[i] = v
+	}
+	// 写入测试 NameTable（让画面有花纹）
+	for i := 0; i < 960; i++ { // 32*30
+		ppu.VRAM.NameTables[i] = byte(i % 16)
+	}
+	// 写入测试 AttributeTable
+	for i := 0; i < 64; i++ {
+		ppu.VRAM.NameTables[960+i] = 0
+	}
+	return ppu
 }
 
 func (p *PPU) Step() {
@@ -91,6 +110,20 @@ func (p *PPU) GetFrame() *image.RGBA {
 	}
 
 	return img
+}
+
+// GetFrameBuffer returns the current frame as a 2D array of color.RGBA for rendering
+func (p *PPU) GetFrameBuffer() [256][240]color.RGBA {
+	var buf [256][240]color.RGBA
+	for y := 0; y < ScreenHeight; y++ {
+		for x := 0; x < ScreenWidth; x++ {
+			i := y*ScreenWidth + x
+			colorIndex := p.framebuffer[i] & 0x3F
+			rgb := paletteRGB[colorIndex]
+			buf[x][y] = color.RGBA{R: rgb[0], G: rgb[1], B: rgb[2], A: 255}
+		}
+	}
+	return buf
 }
 
 func (p *PPU) ClearFrame(colorIndex uint8) {

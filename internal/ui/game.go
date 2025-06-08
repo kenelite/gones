@@ -39,7 +39,10 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	fmt.Println("[gones] Draw called")
+	fmt.Println("[gones] Frame.Render 调用")
 	g.Frame.Render(g.Bus.PPU, screen)
+	fmt.Println("[gones] Menu.Draw 调用")
 	g.Menu.Draw(screen)
 }
 
