@@ -66,6 +66,20 @@ func (b *Bus) Write(addr uint16, val byte) {
 			panic("Bus.Controller1 is nil in Write")
 		}
 		b.Controller1.Write(val)
+	case addr == 0x4014:
+		if b.PPU == nil {
+			panic("Bus.PPU is nil in Write (OAMDMA)")
+		}
+		page := uint16(val) << 8
+		println("[gones] OAMDMA: page=", val)
+		for i := 0; i < 256; i++ {
+			data := b.Read(page + uint16(i))
+			b.PPU.OAM.WriteOAMByte(byte(i), data)
+			if i < 8 { // 只打印前8项，避免刷屏
+				println("[gones] OAMDMA Write: i=", i, "data=", data)
+			}
+		}
+		// DMA 期间 CPU 会卡住 513/514 cycles，简化版可忽略
 	case addr >= 0x8000:
 		if b.Cartridge == nil {
 			panic("Bus.Cartridge is nil in Write")
@@ -76,11 +90,13 @@ func (b *Bus) Write(addr uint16, val byte) {
 
 // RunFrame 执行一帧主循环
 func (b *Bus) RunFrame() error {
-	const cpuCyclesPerFrame = 29780 // NTSC: 1.789773 MHz / 60Hz
-	for i := 0; i < cpuCyclesPerFrame; i++ {
-		b.CPU.Step()
+	const ppuCyclesPerFrame = 261 * 341 // 88901
+	for i := 0; i < ppuCyclesPerFrame; i++ {
 		b.PPU.Step()
-		b.APU.Step()
+		if i%3 == 0 {
+			b.CPU.Step()
+			b.APU.Step()
+		}
 	}
 	return nil
 }
@@ -101,6 +117,12 @@ func (b *Bus) LoadROM(data []byte) error {
 	if b.APU != nil {
 		fmt.Println("[gones] LoadROM: 重建 APU ...")
 		b.APU = apu.NewAPU()
+	}
+	fmt.Println("[gones] LoadROM: 写入 CHR 数据到 PPU VRAM ...")
+	if b.PPU != nil && b.Cartridge != nil && len(b.Cartridge.CHR) > 0 {
+		for i, v := range b.Cartridge.CHR {
+			b.PPU.VRAM.PatternTables[i] = v
+		}
 	}
 	fmt.Println("[gones] LoadROM: 完成")
 	return nil

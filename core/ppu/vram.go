@@ -11,10 +11,27 @@ func NewVRAM() *VRAM {
 }
 
 func (v *VRAM) Read(addr uint16) byte {
-	// TODO: 实现地址映射和镜像逻辑
-	return 0
+	// 实现 Pattern Table、Name Table、Palette 区域的读取
+	switch {
+	case addr < 0x2000:
+		return v.PatternTables[addr]
+	case addr >= 0x2000 && addr < 0x3000:
+		return v.NameTables[addr-0x2000]
+	case addr >= 0x3F00 && addr < 0x3F20:
+		return v.Palette[addr-0x3F00]
+	default:
+		return 0
+	}
 }
 
 func (v *VRAM) Write(addr uint16, val byte) {
-	// TODO: 实现地址映射和镜像逻辑
+	// 实现 Pattern Table、Name Table、Palette 区域的写入
+	switch {
+	case addr < 0x2000:
+		v.PatternTables[addr] = val
+	case addr >= 0x2000 && addr < 0x3000:
+		v.NameTables[addr-0x2000] = val
+	case addr >= 0x3F00 && addr < 0x3F20:
+		v.Palette[addr-0x3F00] = val
+	}
 }
