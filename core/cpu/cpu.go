@@ -21,10 +21,22 @@ type Bus interface {
 // New returns a new CPU instance
 func New(bus Bus) *CPU {
 	return &CPU{
-		SP:     0xFD, // 初始栈指针
+		PC:     0x0000, // 初始程序计数器
+		SP:     0xFD,   // 初始栈指针
 		Status: 0x24,
 		Bus:    bus,
 	}
+}
+
+// Reset 从 ROM 的复位向量启动 CPU
+func (c *CPU) Reset() {
+	// 从复位向量读取启动地址 (0xFFFC-0xFFFD)
+	low := c.Bus.Read(0xFFFC)
+	high := c.Bus.Read(0xFFFD)
+	c.PC = uint16(high)<<8 | uint16(low)
+	c.SP = 0xFD
+	c.Status = 0x24
+	c.cycles = 0
 }
 
 // Step 执行一个指令周期

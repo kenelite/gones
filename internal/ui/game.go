@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"fmt"
-
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/kenelite/gones/core/bus"
 	"github.com/kenelite/gones/core/input"
@@ -39,10 +37,7 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	fmt.Println("[gones] Draw called")
-	fmt.Println("[gones] Frame.Render 调用")
 	g.Frame.Render(g.Bus.PPU, screen)
-	fmt.Println("[gones] Menu.Draw 调用")
 	g.Menu.Draw(screen)
 }
 
@@ -50,6 +45,6 @@ func (g *Game) Layout(outsideW, outsideH int) (int, int) {
 	return 256 * 2, 240 * 2 // 默认放大 2 倍
 }
 
-func formatFPS() string {
-	return fmt.Sprintf("%.0f", ebiten.CurrentFPS())
-}
+// func formatFPS() string {
+// 	return fmt.Sprintf("%.0f", ebiten.CurrentFPS())
+// }

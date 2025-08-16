@@ -120,11 +120,29 @@ func (b *Bus) LoadROM(data []byte) error {
 	}
 	fmt.Println("[gones] LoadROM: 写入 CHR 数据到 PPU VRAM ...")
 	if b.PPU != nil && b.Cartridge != nil && len(b.Cartridge.CHR) > 0 {
-		for i, v := range b.Cartridge.CHR {
-			b.PPU.VRAM.PatternTables[i] = v
+		fmt.Printf("[gones] LoadROM: CHR 数据大小 = %d 字节\n", len(b.Cartridge.CHR))
+		fmt.Printf("[gones] LoadROM: PatternTables 大小 = %d 字节\n", len(b.PPU.VRAM.PatternTables))
+
+		// 修复：只复制不超过 PatternTables 大小的数据
+		chrSize := len(b.Cartridge.CHR)
+		patternTableSize := len(b.PPU.VRAM.PatternTables)
+
+		if chrSize > patternTableSize {
+			fmt.Printf("[gones] LoadROM: 警告：CHR 数据过大，将被截断到 %d 字节\n", patternTableSize)
+			chrSize = patternTableSize
+		}
+
+		for i := 0; i < chrSize; i++ {
+			b.PPU.VRAM.PatternTables[i] = b.Cartridge.CHR[i]
 		}
 	}
 	fmt.Println("[gones] LoadROM: 完成")
+
+	// 重置 CPU 从 ROM 的复位向量开始执行
+	if b.CPU != nil {
+		fmt.Println("[gones] LoadROM: 重置 CPU...")
+		b.CPU.Reset()
+	}
 	return nil
 }
 

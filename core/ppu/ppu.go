@@ -60,19 +60,49 @@ func NewPPU() *PPU {
 		Ctrl:     &ControlRegister{},
 		Mask:     &MaskRegister{},
 	}
+
 	// 初始化默认调色板（调试用）
-	defaultPalette := [8]byte{0x0F, 0x01, 0x21, 0x31, 0x0F, 0x06, 0x16, 0x26}
+	// 调色板地址从 0x3F00 开始
+	defaultPalette := [32]byte{
+		// 背景调色板 (0x3F00-0x3F0F)
+		0x0F, 0x01, 0x21, 0x31, // 调色板 0
+		0x0F, 0x06, 0x16, 0x26, // 调色板 1
+		0x0F, 0x0B, 0x1B, 0x2B, // 调色板 2
+		0x0F, 0x10, 0x20, 0x30, // 调色板 3
+		// 精灵调色板 (0x3F10-0x3F1F)
+		0x0F, 0x01, 0x21, 0x31, // 调色板 0
+		0x0F, 0x06, 0x16, 0x26, // 调色板 1
+		0x0F, 0x0B, 0x1B, 0x2B, // 调色板 2
+		0x0F, 0x10, 0x20, 0x30, // 调色板 3
+	}
+
+	// 写入调色板数据到 VRAM
 	for i, v := range defaultPalette {
 		ppu.VRAM.Palette[i] = v
 	}
-	// 写入测试 NameTable（让画面有花纹）
-	for i := 0; i < 960; i++ { // 32*30
-		ppu.VRAM.NameTables[i] = byte(i % 16)
+
+	// 写入测试 PatternTable（创建一些简单的图案）
+	for i := 0; i < 0x2000; i++ {
+		ppu.VRAM.PatternTables[i] = byte(i % 256)
 	}
-	// 写入测试 AttributeTable
+
+	// 写入测试 NameTable（创建棋盘格图案）
+	for ty := 0; ty < 30; ty++ {
+		for tx := 0; tx < 32; tx++ {
+			index := ty*32 + tx
+			if (ty/4+tx/4)%2 == 0 {
+				ppu.VRAM.NameTables[index] = 0x01 // 使用图案1
+			} else {
+				ppu.VRAM.NameTables[index] = 0x02 // 使用图案2
+			}
+		}
+	}
+
+	// 写入测试 AttributeTable（设置调色板）
 	for i := 0; i < 64; i++ {
-		ppu.VRAM.NameTables[960+i] = 0
+		ppu.VRAM.NameTables[960+i] = byte(i % 4) // 使用不同的调色板
 	}
+
 	return ppu
 }
 
@@ -95,8 +125,8 @@ func (p *PPU) GetFrame() *image.RGBA {
 
 	for y := 0; y < ScreenHeight; y++ {
 		for x := 0; x < ScreenWidth; x++ {
-			i := y*ScreenWidth + x
-			colorIndex := p.framebuffer[i] & 0x3F // 6-bit index
+			// 从 Renderer 的 Framebuffer 获取颜色索引
+			colorIndex := p.Renderer.Framebuffer[y][x] & 0x3F // 6-bit index
 
 			rgb := paletteRGB[colorIndex]
 			col := color.RGBA{
@@ -117,8 +147,8 @@ func (p *PPU) GetFrameBuffer() [256][240]color.RGBA {
 	var buf [256][240]color.RGBA
 	for y := 0; y < ScreenHeight; y++ {
 		for x := 0; x < ScreenWidth; x++ {
-			i := y*ScreenWidth + x
-			colorIndex := p.framebuffer[i] & 0x3F
+			// 从 Renderer 的 Framebuffer 获取颜色索引
+			colorIndex := p.Renderer.Framebuffer[y][x] & 0x3F
 			rgb := paletteRGB[colorIndex]
 			buf[x][y] = color.RGBA{R: rgb[0], G: rgb[1], B: rgb[2], A: 255}
 		}
