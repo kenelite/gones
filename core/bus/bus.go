@@ -98,6 +98,13 @@ func (b *Bus) RunFrame() error {
 			b.APU.Step()
 		}
 	}
+
+	// 调试：显示CPU状态
+	if b.PPU.Frame%60 == 0 { // 每秒显示一次
+		fmt.Printf("[gones] 帧 %d: CPU PC=0x%04X, A=0x%02X, X=0x%02X, Y=0x%02X, Status=0x%02X\n",
+			b.PPU.Frame, b.CPU.PC, b.CPU.A, b.CPU.X, b.CPU.Y, b.CPU.Status)
+	}
+
 	return nil
 }
 
@@ -113,6 +120,13 @@ func (b *Bus) LoadROM(data []byte) error {
 	}
 	fmt.Println("[gones] LoadROM: 替换 Cartridge ...")
 	b.Cartridge = cartridge
+
+	// 建立PPU VRAM与Cartridge的CHR内存映射
+	if b.PPU != nil {
+		fmt.Println("[gones] LoadROM: 建立CHR内存映射...")
+		b.PPU.VRAM.SetCartridge(cartridge)
+	}
+
 	// 可选：重建 APU
 	if b.APU != nil {
 		fmt.Println("[gones] LoadROM: 重建 APU ...")
