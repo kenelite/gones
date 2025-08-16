@@ -24,6 +24,29 @@ func (r *Renderer) RenderFrame(ppu *PPU) {
 	patternTableBase := 0x0000
 	attributeTableBase := nametableBase + 0x3C0
 
+	// 调试：显示一些NameTable数据
+	if ppu.Frame%60 == 0 { // 每秒显示一次
+		fmt.Printf("[gones] 渲染帧 %d: NameTable[0-15] = ", ppu.Frame)
+		for i := 0; i < 16; i++ {
+			fmt.Printf("%d ", ppu.VRAM.Read(uint16(nametableBase+i)))
+		}
+		fmt.Println()
+
+		// 显示一些PatternTable数据
+		fmt.Printf("[gones] 渲染帧 %d: PatternTable[0-15] = ", ppu.Frame)
+		for i := 0; i < 16; i++ {
+			fmt.Printf("%d ", ppu.VRAM.Read(uint16(patternTableBase+i)))
+		}
+		fmt.Println()
+
+		// 显示调色板数据
+		fmt.Printf("[gones] 渲染帧 %d: Palette[0-15] = ", ppu.Frame)
+		for i := 0; i < 16; i++ {
+			fmt.Printf("%d ", ppu.VRAM.Palette[i])
+		}
+		fmt.Println()
+	}
+
 	for ty := 0; ty < 30; ty++ {
 		for tx := 0; tx < 32; tx++ {
 			tileIndex := ppu.VRAM.Read(uint16(nametableBase + ty*32 + tx))
@@ -38,20 +61,20 @@ func (r *Renderer) RenderFrame(ppu *PPU) {
 				attrByte := ppu.VRAM.Read(uint16(attributeTableBase + attrY*8 + attrX))
 
 				// 计算调色板索引
-				shift := ((ty%4)/2)*4 + ((tx%4)/2)*2
+				shift := ((tx%4)/2)*2 + ((ty%4)/2)*4
 				paletteIndex := (attrByte >> shift) & 0x03
 
 				for col := 0; col < 8; col++ {
-					bit := 7 - col
-					pixel := ((high>>bit)&1)<<1 | ((low >> bit) & 1)
+					bit0 := (low >> (7 - col)) & 0x01
+					bit1 := (high >> (7 - col)) & 0x01
+					colorIndex := bit1<<1 | bit0
 
-					if pixel > 0 { // 只渲染非透明像素
-						// 背景调色板从 0x3F00 开始
-						colorIndex := ppu.VRAM.Read(0x3F00+uint16(paletteIndex)*4+uint16(pixel)) & 0x3F
-						xPix := tx*8 + col
-						yPix := ty*8 + row
-						if xPix < 256 && yPix < 240 {
-							r.Framebuffer[yPix][xPix] = colorIndex
+					if colorIndex != 0 { // 透明色
+						finalColorIndex := uint8(uint8(paletteIndex)*4 + uint8(colorIndex))
+						yPos := ty*8 + row
+						xPos := tx*8 + col
+						if yPos < 240 && xPos < 256 {
+							r.Framebuffer[yPos][xPos] = finalColorIndex
 						}
 					}
 				}
@@ -59,42 +82,36 @@ func (r *Renderer) RenderFrame(ppu *PPU) {
 		}
 	}
 
-	// 精灵渲染（OAM，8x8 sprite，优先级/遮挡/翻转/透明等未实现）
+	// 精灵渲染（简化版）
 	for i := 0; i < 64; i++ {
-		spr := ppu.OAM.Sprites[i]
-		y := int(spr.Y)
-		tileIndex := spr.Tile
-		attr := spr.Attr
-		x := int(spr.X)
-		paletteIndex := (attr & 0x3) + 4 // sprite palette 起始于 0x3F10
+		y := ppu.OAM.ReadOAMByte(byte(i * 4))
+		tileIndex := ppu.OAM.ReadOAMByte(byte(i*4 + 1))
+		attributes := ppu.OAM.ReadOAMByte(byte(i*4 + 2))
+		x := ppu.OAM.ReadOAMByte(byte(i*4 + 3))
 
-		for row := 0; row < 8; row++ {
-			low := ppu.VRAM.Read(uint16(0x0000 + int(tileIndex)*16 + row))
-			high := ppu.VRAM.Read(uint16(0x0000 + int(tileIndex)*16 + row + 8))
+		if y < 240 && tileIndex > 0 {
+			paletteIndex := (attributes >> 1) & 0x03
 
-			for col := 0; col < 8; col++ {
-				bit := 7 - col
-				pixel := ((high>>bit)&1)<<1 | ((low >> bit) & 1)
+			for row := 0; row < 8; row++ {
+				low := ppu.VRAM.Read(uint16(patternTableBase + int(tileIndex)*16 + row))
+				high := ppu.VRAM.Read(uint16(patternTableBase + int(tileIndex)*16 + row + 8))
 
-				if pixel == 0 {
-					continue // 透明
-				}
+				for col := 0; col < 8; col++ {
+					bit0 := (low >> (7 - col)) & 0x01
+					bit1 := (high >> (7 - col)) & 0x01
+					colorIndex := bit1<<1 | bit0
 
-				// 精灵调色板从 0x3F10 开始
-				colorIndex := ppu.VRAM.Read(0x3F10+uint16((paletteIndex-4)*4)+uint16(pixel)) & 0x3F
-				xPix := x + col
-				yPix := y + row
-
-				if xPix >= 0 && xPix < 256 && yPix >= 0 && yPix < 240 {
-					r.Framebuffer[yPix][xPix] = colorIndex
+					if colorIndex != 0 {
+						finalColorIndex := uint8(uint8(paletteIndex)*4 + uint8(colorIndex) + 16) // +16 for sprite palettes
+						yPos := int(y) + row
+						xPos := int(x) + col
+						if yPos < 240 && xPos < 256 {
+							r.Framebuffer[yPos][xPos] = finalColorIndex
+						}
+					}
 				}
 			}
 		}
-	}
-
-	// 只在调试模式下显示信息
-	if ppu.Frame%60 == 0 { // 每秒显示一次
-		fmt.Printf("[gones] 渲染帧 %d: 非黑色像素数量 = %d\n", ppu.Frame, countNonBlackPixels(r.Framebuffer))
 	}
 }
 

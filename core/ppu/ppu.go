@@ -61,7 +61,7 @@ func NewPPU() *PPU {
 		Mask:     &MaskRegister{},
 	}
 
-	// 初始化默认调色板（调试用）
+	// 初始化默认调色板（使用标准NES调色板）
 	// 调色板地址从 0x3F00 开始
 	defaultPalette := [32]byte{
 		// 背景调色板 (0x3F00-0x3F0F)
@@ -81,27 +81,9 @@ func NewPPU() *PPU {
 		ppu.VRAM.Palette[i] = v
 	}
 
-	// 写入测试 PatternTable（创建一些简单的图案）
-	for i := 0; i < 0x2000; i++ {
-		ppu.VRAM.PatternTables[i] = byte(i % 256)
-	}
-
-	// 写入测试 NameTable（创建棋盘格图案）
-	for ty := 0; ty < 30; ty++ {
-		for tx := 0; tx < 32; tx++ {
-			index := ty*32 + tx
-			if (ty/4+tx/4)%2 == 0 {
-				ppu.VRAM.NameTables[index] = 0x01 // 使用图案1
-			} else {
-				ppu.VRAM.NameTables[index] = 0x02 // 使用图案2
-			}
-		}
-	}
-
-	// 写入测试 AttributeTable（设置调色板）
-	for i := 0; i < 64; i++ {
-		ppu.VRAM.NameTables[960+i] = byte(i % 4) // 使用不同的调色板
-	}
+	// 不写入测试数据，让真实的游戏数据覆盖
+	// PatternTables 将由 ROM 加载时填充
+	// NameTables 将由游戏初始化时填充
 
 	return ppu
 }
