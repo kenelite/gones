@@ -17,7 +17,6 @@ func NewScreen() *Screen {
 }
 
 func (s *Screen) Render(ppu *ppu.PPU, target *ebiten.Image) {
-	fmt.Println("[gones] Screen.Render: begin")
 	// 获取 PPU 帧缓冲区
 	frame := ppu.GetFrameBuffer() // [256][240]color.RGBA
 	// 创建一个 256x240 的 ebiten.Image
@@ -32,10 +31,12 @@ func (s *Screen) Render(ppu *ppu.PPU, target *ebiten.Image) {
 			}
 		}
 	}
-	fmt.Printf("[gones] 非黑色像素数量: %d\n", count)
+	// 只在调试模式下显示像素信息
+	if count > 0 && count < 61440 {
+		fmt.Printf("[gones] 非黑色像素数量: %d\n", count)
+	}
 	// 放大 2x 绘制到 screen
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(2, 2)
 	target.DrawImage(img, op)
-	fmt.Println("[gones] Screen.Render: end")
 }

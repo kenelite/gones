@@ -33,10 +33,7 @@ func NewAPU() *APU {
 	if mixer == nil {
 		log.Println("[APU] NewMixer failed!")
 	}
-	output := NewAudioOutput()
-	if output == nil {
-		log.Println("[APU] NewAudioOutput failed!")
-	}
+	var output *AudioOutput = nil // 禁用音频输出，避免卡住
 	log.Println("[APU] All submodules initialized.")
 	return &APU{
 		Pulse1:   pulse1,
@@ -56,5 +53,7 @@ func (a *APU) Step() {
 	a.Noise.Step()
 
 	sample := a.Mixer.Mix(a.Pulse1, a.Pulse2, a.Triangle, a.Noise)
-	a.Output.EnqueueSample(sample)
+	if a.Output != nil {
+		a.Output.EnqueueSample(sample)
+	}
 }
